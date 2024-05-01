@@ -25,7 +25,6 @@ model.fit(x_train, y_train, epochs=5)
 print("Before unlearning: ")
 model.evaluate(x_test, y_test)
 
-
 #loss_fn = losses.MeanSquaredError()
 ilist = []
 
