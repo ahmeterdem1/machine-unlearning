@@ -90,52 +90,56 @@ test_data = np.array(test_data)
 x_test = test_data[:, :-1]
 y_test = test_data[:, -1]
 
-# 200 people wants their data to be removed from the model.
-indexes = np.random.choice(x_train.shape[0], 200)
 
-to_delete_data = x_train[indexes]
-to_delete_label = y_train[indexes]
 
-# input shape 13
+# So that this file is importable
+if __name__ == "__main__":
 
-optimizer = optimizers.Adam()
-loss = losses.SparseCategoricalCrossentropy()
-# Sparse categorical cross-entropy is the most applicable loss function without
-# getting to the terrains of deep learning.
+    # 200 people wants their data to be removed from the model.
+    indexes = np.random.choice(x_train.shape[0], 200)
+    to_delete_data = x_train[indexes]
+    to_delete_label = y_train[indexes]
 
-model = Sequential([
-    layers.Input((13,)),
-    layers.Dense(256, activation="tanh"),
-    layers.Dense(128, activation="tanh"),
-    layers.Dense(64, activation="tanh"),
-    layers.Dense(64, activation="tanh"),
-    layers.Dense(64, activation="tanh"),
-    layers.Dense(32, activation="tanh"),
-    layers.Dense(2, activation="softmax")
-])
+    # input shape 13
 
-batch_size = 32
+    optimizer = optimizers.Adam()
+    loss = losses.SparseCategoricalCrossentropy()
+    # Sparse categorical cross-entropy is the most applicable loss function without
+    # getting to the terrains of deep learning.
 
-model.compile(loss=loss, optimizer=optimizer, metrics=["accuracy"])
-model.fit(x_train, y_train, epochs=5, batch_size=batch_size)
-model.evaluate(x_test, y_test)
+    model = Sequential([
+        layers.Input((13,)),
+        layers.Dense(256, activation="tanh"),
+        layers.Dense(128, activation="tanh"),
+        layers.Dense(64, activation="tanh"),
+        layers.Dense(64, activation="tanh"),
+        layers.Dense(64, activation="tanh"),
+        layers.Dense(32, activation="tanh"),
+        layers.Dense(2, activation="softmax")
+    ])
 
-model.optimizer.learning_rate.assign(1e-05)
+    batch_size = 32
 
-for k in range(len(to_delete_data) // batch_size):
-    start = k * batch_size
-    end = start + batch_size
+    model.compile(loss=loss, optimizer=optimizer, metrics=["accuracy"])
+    model.fit(x_train, y_train, epochs=5, batch_size=batch_size)
+    model.evaluate(x_test, y_test)
 
-    with tf.GradientTape() as tape:
-        temp = to_delete_data[start:end]
+    model.optimizer.learning_rate.assign(1e-05)
 
-        for layer in model.layers:
-            temp = layer(temp)
+    for k in range(len(to_delete_data) // batch_size):
+        start = k * batch_size
+        end = start + batch_size
 
-        error = losses.sparse_categorical_crossentropy(to_delete_label[start:end], temp)
+        with tf.GradientTape() as tape:
+            temp = to_delete_data[start:end]
 
-    grad = tape.gradient(error, model.trainable_variables)
-    grad = [tf.negative(k) for k in grad]
-    model.optimizer.apply_gradients(zip(grad, model.trainable_variables))
+            for layer in model.layers:
+                temp = layer(temp)
 
-model.evaluate(x_test, y_test)
+            error = losses.sparse_categorical_crossentropy(to_delete_label[start:end], temp)
+
+        grad = tape.gradient(error, model.trainable_variables)
+        grad = [tf.negative(k) for k in grad]
+        model.optimizer.apply_gradients(zip(grad, model.trainable_variables))
+
+    model.evaluate(x_test, y_test)
